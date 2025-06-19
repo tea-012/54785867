@@ -1,104 +1,118 @@
 const express = require('express');
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const cookieParser = require('cookie-parser');
 const path = require('path');
+// 1. Добавляем новые модули в начало файла
+const { Sequelize, DataTypes } = require('sequelize');
+const bcrypt = require('bcryptjs');
 
 const app = express();
 
-// Настройки
-app.use(express.static('public'));
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
-app.use(cookieParser());
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
-
-// Подключение к MongoDB (используйте бесплатный кластер на mongodb.com)
-mongoose.connect('mongodb+srv://username:password@your-cluster.mongodb.net/pet_shelter?retryWrites=true&w=majority', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
+// 2. Настройка подключения к SQLite (после создания app)
+const sequelize = new Sequelize({
+  dialect: 'sqlite',
+  storage: './database.sqlite',
+  logging: false
 });
 
-// Модель пользователя
-const User = mongoose.model('User', {
-  name: String,
-  email: { type: String, unique: true },
-  password: String,
-  role: { type: String, default: 'user' } // 'user' или 'admin'
+// 3. Модель пользователя
+const User = sequelize.define('User', {
+  name: DataTypes.STRING,
+  email: {
+    type: DataTypes.STRING,
+    unique: true
+  },
+  password: DataTypes.STRING
 });
 
-// Генерация JWT токена
-const generateToken = (id) => {
-  return jwt.sign({ id }, 'your-secret-key', { expiresIn: '30d' });
-};
-
-// Middleware для проверки авторизации
-const authMiddleware = async (req, res, next) => {
-  const token = req.cookies.token;
-  if (!token) return next();
-  
+// 4. Инициализация БД (перед маршрутами)
+(async () => {
   try {
-    const decoded = jwt.verify(token, 'your-secret-key');
-    req.user = await User.findById(decoded.id);
-    next();
+    await sequelize.sync();
+    console.log('База данных подключена');
   } catch (error) {
-    console.error(error);
-    next();
+    console.error('Ошибка подключения к БД:', error);
   }
-};
+})();
 
-// Маршруты
-app.get('/', authMiddleware, (req, res) => {
-  res.render('index', { user: req.user });
+// Настройка middleware
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json()); // Добавляем для работы с JSON
+
+// Главная страница
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'index.html'), (err) => {
+    if (err) {
+      console.error('Ошибка при отправке index.html:', err);
+      res.status(404).send('Страница не найдена');
+    }
+  });
 });
 
-// Регистрация
+// 5. Проверка email (новый маршрут)
+app.get('/check-email', async (req, res) => {
+  try {
+    const { email } = req.query;
+    const user = await User.findOne({ where: { email } });
+    res.json({ exists: !!user });
+  } catch (error) {
+    res.status(500).json({ error: 'Ошибка проверки' });
+  }
+});
+
+// Страница входа
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'auth', 'login.html'));
+});
+
+// Страница регистрации
+app.get('/register', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'auth', 'register.html'));
+});
+
+// 6. Обновленный обработчик регистрации
 app.post('/register', async (req, res) => {
   try {
     const { name, email, password } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({ name, email, password: hashedPassword });
     
-    const token = generateToken(user._id);
-    res.cookie('token', token, { httpOnly: true, maxAge: 30 * 24 * 60 * 60 * 1000 });
-    res.redirect('/profile');
+    // Проверка существования пользователя
+    const userExists = await User.findOne({ where: { email } });
+    if (userExists) {
+      return res.status(400).json({ error: 'Email уже используется' });
+    }
+    
+    // Хеширование пароля и создание пользователя
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await User.create({ name, email, password: hashedPassword });
+    
+    res.json({ success: true });
   } catch (error) {
-    console.error(error);
-    res.status(500).send('Ошибка регистрации');
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Авторизация
+// 7. Обновленный обработчик входа
 app.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ where: { email } });
     
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).send('Неверный email или пароль');
+    if (!user) {
+      return res.status(401).json({ error: 'Пользователь не найден' });
     }
     
-    const token = generateToken(user._id);
-    res.cookie('token', token, { httpOnly: true, maxAge: 30 * 24 * 60 * 60 * 1000 });
-    res.redirect('/profile');
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'Неверный пароль' });
+    }
+    
+    res.json({ success: true, name: user.name });
   } catch (error) {
-    console.error(error);
-    res.status(500).send('Ошибка авторизации');
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Выход
-app.get('/logout', (req, res) => {
-  res.clearCookie('token');
-  res.redirect('/');
+// Запуск сервера
+app.listen(3000, () => {
+  console.log('Сервер работает: http://localhost:3000');
+  console.log('Проверьте главную страницу: http://localhost:3000/');
 });
-
-// Защищённый маршрут
-app.get('/profile', authMiddleware, (req, res) => {
-  if (!req.user) return res.redirect('/login');
-  res.render('profile', { user: req.user });
-});
-
-app.listen(3000, () => console.log('Сервер запущен на http://localhost:3000'));

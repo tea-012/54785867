@@ -1,32 +1,51 @@
-/* Добавьте это в конец файла */
-.form-group {
-  margin-bottom: 1rem;
+body {
+  font-family: Arial, sans-serif;
+  line-height: 1.6;
+  margin: 0;
+  padding: 20px;
+  background-color: #f5f5f5;
 }
 
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
 }
 
-.form-group input {
-  width: 100%;
-  padding: 0.5rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+h1 {
+  color: #2c3e50;
+  text-align: center;
 }
 
-button[type="submit"] {
-  background: #4CAF50;
+.auth-buttons {
+  text-align: center;
+  margin: 30px 0;
+}
+
+.btn {
+  display: inline-block;
+  padding: 10px 20px;
+  margin: 0 10px;
+  border-radius: 5px;
+  text-decoration: none;
   color: white;
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
+  font-weight: bold;
 }
 
-.profile-info {
+.btn-register {
+  background: #27ae60;
+}
+
+.btn-login {
+  background: #3498db;
+}
+
+.info {
   background: #f9f9f9;
-  padding: 1rem;
-  border-radius: 4px;
-  margin-bottom: 1rem;
+  padding: 15px;
+  border-radius: 5px;
+  margin-top: 20px;
 }

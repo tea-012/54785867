@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+  <script>
+document.querySelector('form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const email = document.querySelector('[name="email"]').value;
+  const response = await fetch(`/check-email?email=${encodeURIComponent(email)}`);
+  const data = await response.json();
+  
+  if (data.exists) {
+    alert('Этот email уже зарегистрирован');
+    return;
+  }
+  
+  e.target.submit();
+});
+</script>
+<head>
+  <title>Вход</title>
+</head>
+<body>
+  <h2>Вход</h2>
+  <form action="/login" method="POST">
+    <input type="email" name="email" placeholder="Email" required><br><br>
+    <input type="password" name="password" placeholder="Пароль" required><br><br>
+    <button type="submit">Войти</button>
+  </form>
+</body>
+</html>
