@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Профиль</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+  
+  <main class="container">
+    <h2>Ваш профиль</h2>
+    <div class="profile-info">
+      <p><strong>Имя:</strong> <%= user.name %></p>
+      <p><strong>Email:</strong> <%= user.email %></p>
+      <p><strong>Роль:</strong> <%= user.role %></p>
+    </div>
+    <a href="/logout" class="btn">Выйти</a>
+  </main>
+
+  <%- include('partials/footer') %>
+</body>
+</html>
