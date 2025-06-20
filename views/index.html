@@ -1,14 +1,152 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-  <title>Приют животных</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Приют "Лапки"</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-  <h1>Добро пожаловать!</h1>
-  <a href="/login">Вход</a> | 
-  <a href="/register">Регистрация</a>
-  
-  <p>Тестовый сайт приюта животных</p>
+  <header>
+    <div class="header-container">
+      <a href="/" class="logo">
+        <img src="/images/logo.png" alt="Логотип Лапки" class="logo-img">
+        <span>Лапки</span>
+      </a>
+      <nav>
+        <a href="/login" class="btn">Вход</a>
+        <a href="/register" class="btn">Регистрация</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="animals-grid" id="animals-container">
+      <!-- Карточки будут добавляться через JavaScript -->
+    </div>
+
+    <!-- Пагинация -->
+    <div class="pagination">
+      <button id="prev-page" class="btn" disabled>&laquo; Назад</button>
+      <div class="page-numbers" id="page-numbers"></div>
+      <button id="next-page" class="btn">Вперед &raquo;</button>
+    </div>
+  </main>
+
+  <footer>
+    <div class="footer-container">
+      <p>Хавратович алина</p>
+      <p>Телефон: +8 800 553 535</p>
+    </div>
+  </footer>
+
+  <script>
+    // Данные животных
+    const allAnimals = [
+      { id: 1, name: 'Барсик честно это кот', age: '2 года', description: 'Любит поспать', image: 'images/e.png' },
+      { id: 2, name: 'Рекс', age: '4 года', description: 'Любит активные прогулки и кусаться', image: 'images/g.gif' },
+      { id: 3, name: 'Шпунтик', age: '1 год', description: 'Любит копать', image: 'images/fox.jpg' },
+    ];
+
+    // Настройки пагинации
+    const itemsPerPage = 1;
+    let currentPage = 1;
+    const totalPages = Math.ceil(allAnimals.length / itemsPerPage);
+
+    // DOM элементы
+    const animalsContainer = document.getElementById('animals-container');
+    const pageNumbers = document.getElementById('page-numbers');
+    const prevButton = document.getElementById('prev-page');
+    const nextButton = document.getElementById('next-page');
+
+    // Функция отображения животных на текущей странице
+    function displayAnimals(page) {
+      animalsContainer.innerHTML = '';
+      const startIndex = (page - 1) * itemsPerPage;
+      const endIndex = startIndex + itemsPerPage;
+      const animalsToShow = allAnimals.slice(startIndex, endIndex);
+
+      animalsToShow.forEach(animal => {
+        const card = document.createElement('div');
+        card.className = 'animal-card';
+        card.innerHTML = `
+          <img src="${animal.image}" alt="${animal.name}" class="animal-img">
+          <div class="animal-info">
+            <h3>${animal.name}</h3>
+            <p>Возраст: ${animal.age}</p>
+            <p>${animal.description}</p>
+            <button class="btn details-btn">Подробнее</button>
+          </div>
+        `;
+        animalsContainer.appendChild(card);
+        
+        // Добавляем обработчик, который ничего не делает
+        const detailsBtn = card.querySelector('.details-btn');
+        detailsBtn.addEventListener('click', (e) => {
+          e.preventDefault(); // Отменяем стандартное поведение
+          // Ничего не делаем при клике
+        });
+      });
+    }
+
+    // Функция обновления пагинации
+    function updatePagination() {
+      pageNumbers.innerHTML = '';
+      
+      // Кнопка "Назад"
+      prevButton.disabled = currentPage === 1;
+      
+      // Номера страниц
+      for (let i = 1; i <= totalPages; i++) {
+        const pageButton = document.createElement('button');
+        pageButton.className = `btn ${i === currentPage ? 'active' : ''}`;
+        pageButton.textContent = i;
+        pageButton.addEventListener('click', () => {
+          currentPage = i;
+          displayAnimals(currentPage);
+          updatePagination();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+        pageNumbers.appendChild(pageButton);
+      }
+      
+      // Кнопка "Вперед"
+      nextButton.disabled = currentPage === totalPages;
+    }
+
+    // Обработчики кнопок
+    prevButton.addEventListener('click', () => {
+      if (currentPage > 1) {
+        currentPage--;
+        displayAnimals(currentPage);
+        updatePagination();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
+
+    nextButton.addEventListener('click', () => {
+      if (currentPage < totalPages) {
+        currentPage++;
+        displayAnimals(currentPage);
+        updatePagination();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
+
+    // Инициализация
+    displayAnimals(currentPage);
+    updatePagination();
+
+    // Фикс футера
+    document.addEventListener('DOMContentLoaded', () => {
+      const body = document.body;
+      const html = document.documentElement;
+      
+      if (body.scrollHeight <= window.innerHeight) {
+        document.querySelector('footer').style.marginTop = 'auto';
+      }
+    });
+  </script>
 </body>
 </html>

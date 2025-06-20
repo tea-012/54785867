@@ -1,118 +1,162 @@
 const express = require('express');
 const path = require('path');
-// 1. Добавляем новые модули в начало файла
 const { Sequelize, DataTypes } = require('sequelize');
 const bcrypt = require('bcryptjs');
 
 const app = express();
 
-// 2. Настройка подключения к SQLite (после создания app)
+// Настройка SQLite
 const sequelize = new Sequelize({
   dialect: 'sqlite',
   storage: './database.sqlite',
-  logging: false
+  logging: console.log // Включаем логирование SQL-запросов
 });
 
-// 3. Модель пользователя
+// Модель пользователя
 const User = sequelize.define('User', {
-  name: DataTypes.STRING,
+  name: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
   email: {
     type: DataTypes.STRING,
-    unique: true
+    unique: true,
+    allowNull: false
   },
-  password: DataTypes.STRING
+  password: {
+    type: DataTypes.STRING,
+    allowNull: false
+  }
+}, {
+  timestamps: true // Добавляем createdAt и updatedAt
 });
 
-// 4. Инициализация БД (перед маршрутами)
+// Инициализация БД
 (async () => {
   try {
-    await sequelize.sync();
-    console.log('База данных подключена');
+    await sequelize.sync({ force: false }); // Не пересоздавать таблицы при каждом запуске
+    console.log('✓ База данных подключена');
   } catch (error) {
-    console.error('Ошибка подключения к БД:', error);
+    console.error('✗ Ошибка подключения к БД:', error);
   }
 })();
 
-// Настройка middleware
+// Middleware
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
-app.use(express.json()); // Добавляем для работы с JSON
+app.use(express.json());
 
-// Главная страница
+// Маршруты
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'index.html'), (err) => {
-    if (err) {
-      console.error('Ошибка при отправке index.html:', err);
-      res.status(404).send('Страница не найдена');
-    }
-  });
+  res.sendFile(path.join(__dirname, 'views', 'index.html'));
 });
 
-// 5. Проверка email (новый маршрут)
+// Проверка email
 app.get('/check-email', async (req, res) => {
   try {
     const { email } = req.query;
     const user = await User.findOne({ where: { email } });
     res.json({ exists: !!user });
   } catch (error) {
+    console.error('Ошибка проверки email:', error);
     res.status(500).json({ error: 'Ошибка проверки' });
   }
 });
 
-// Страница входа
+// Страницы
 app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'auth', 'login.html'));
 });
 
-// Страница регистрации
 app.get('/register', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'auth', 'register.html'));
 });
 
-// 6. Обновленный обработчик регистрации
+// Регистрация (с логированием)
 app.post('/register', async (req, res) => {
   try {
     const { name, email, password } = req.body;
     
-    // Проверка существования пользователя
+    console.log('\n=== Попытка регистрации ===');
+    console.log('Данные:', { name, email, password: '******' });
+
     const userExists = await User.findOne({ where: { email } });
     if (userExists) {
-      return res.status(400).json({ error: 'Email уже используется' });
+      console.log('❌ Email уже занят:', email);
+      return res.status(400).json({ 
+        error: 'EMAIL_EXISTS',
+        message: 'Этот email уже зарегистрирован' 
+      });
     }
     
-    // Хеширование пароля и создание пользователя
     const hashedPassword = await bcrypt.hash(password, 10);
-    await User.create({ name, email, password: hashedPassword });
+    const user = await User.create({ 
+      name, 
+      email, 
+      password: hashedPassword 
+    });
     
+    console.log('✅ Новый пользователь:', user.email);
     res.json({ success: true });
+    
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('❌ Ошибка регистрации:', error);
+    res.status(500).json({ 
+      error: 'SERVER_ERROR',
+      message: 'Ошибка при регистрации. Попробуйте позже'
+    });
   }
 });
 
-// 7. Обновленный обработчик входа
+// Вход (с логированием)
 app.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+    
+    console.log('\n=== Попытка входа ===');
+    console.log('Email:', email);
+
     const user = await User.findOne({ where: { email } });
     
     if (!user) {
-      return res.status(401).json({ error: 'Пользователь не найден' });
+      console.log('❌ Пользователь не найден');
+      return res.status(401).json({ 
+        error: 'USER_NOT_FOUND', // Тип ошибки для фронтенда
+        message: 'Аккаунт не найден. Проверьте email или зарегистрируйтесь' 
+      });
     }
     
     const isPasswordValid = await bcrypt.compare(password, user.password);
+    
     if (!isPasswordValid) {
-      return res.status(401).json({ error: 'Неверный пароль' });
+      console.log('❌ Неверный пароль для:', email);
+      return res.status(401).json({ 
+        error: 'WRONG_PASSWORD',
+        message: 'Неверный пароль. Попробуйте снова или восстановите доступ'
+      });
     }
     
-    res.json({ success: true, name: user.name });
+    console.log('✅ Успешный вход:', user.email);
+    
+    res.json({ 
+      success: true, 
+      name: user.name,
+      email: user.email
+    });
+    
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('❌ Ошибка входа:', error);
+    res.status(500).json({ 
+      error: 'SERVER_ERROR',
+      message: 'Ошибка сервера. Пожалуйста, попробуйте позже'
+    });
   }
 });
 
 // Запуск сервера
-app.listen(3000, () => {
-  console.log('Сервер работает: http://localhost:3000');
-  console.log('Проверьте главную страницу: http://localhost:3000/');
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`\n=== Сервер запущен ===`);
+  console.log(`http://localhost:${PORT}`);
+  console.log(`======================\n`);
 });

@@ -1,31 +1,56 @@
 <!DOCTYPE html>
-<html>
-  <script>
-document.querySelector('form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  
-  const email = document.querySelector('[name="email"]').value;
-  const response = await fetch(`/check-email?email=${encodeURIComponent(email)}`);
-  const data = await response.json();
-  
-  if (data.exists) {
-    alert('Этот email уже зарегистрирован');
-    return;
-  }
-  
-  e.target.submit();
-});
-</script>
+<html lang="ru">
 <head>
-  <title>Регистрация</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Регистрация | Приют "Лапки"</title>
+  <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-  <h2>Регистрация</h2>
-  <form action="/register" method="POST">
-    <input type="text" name="name" placeholder="Имя" required><br><br>
-    <input type="email" name="email" placeholder="Email" required><br><br>
-    <input type="password" name="password" placeholder="Пароль" required><br><br>
-    <button type="submit">Зарегистрироваться</button>
-  </form>
+  <header>
+    <div class="header-container">
+            <a href="/" class="logo">
+        <img src="/images/logo.png" alt="Логотип Лапки" class="logo-img">
+      <div class="logo">Лапки</div>
+      <nav>
+        <a href="/login" class="btn">Вход</a>
+        <a href="/register" class="btn">Регистрация</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="auth-container">
+      <h2>Создать аккаунт</h2>
+      <form class="auth-form" action="/register" method="POST">
+        <input type="text" name="name" placeholder="Ваше имя" required>
+        <input type="email" name="email" placeholder="Email" required>
+        <input type="password" name="password" placeholder="Пароль" required>
+        <button type="submit">Зарегистрироваться</button>
+      </form>
+      <p style="text-align: center; margin-top: 15px;">
+        Уже есть аккаунт? <a href="/login">Войти</a>
+      </p>
+    </div>
+  </main>
+
+  <footer>
+    <div class="footer-container">
+      <p>2025</p>
+    </div>
+  </footer>
+   <!-- В конец body всех страниц (перед </body>) -->
+<script>
+  // Фикс футера
+  document.addEventListener('DOMContentLoaded', () => {
+    const body = document.body;
+    const html = document.documentElement;
+    
+    if (body.scrollHeight <= window.innerHeight) {
+      document.querySelector('footer').style.marginTop = 'auto';
+    }
+  });
+</script>
+  <script src="/js/auth.js"></script>
 </body>
 </html>
